@@ -9,6 +9,7 @@
     </head>
     <body>
         <div class="container">
+            <h1>Video Library</h1>
             <div class="filters">
                 <input type="text" id="search" placeholder="Search title, artist, genre"/>
                 <input type="number" id="daysFilter" placeholder="Days" min="0"/>
@@ -125,6 +126,10 @@
       renderTable(filtered);
     });
   </script>
-        <style>.hide-column { display: none; }</style>
+        <style>
+    .hide-column {
+      display: none;
+    }
+  </style>
     </body>
 </html>
