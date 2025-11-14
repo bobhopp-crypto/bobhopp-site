@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video Library</title>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  body { background-color: #0b0f17; color: #eef2f7; font-family: system-ui, sans-serif; margin: 0; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 10px 16px 40px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .card { background: #101827; border: 1px solid #22324a; border-radius: 12px; padding: 10px 12px; }
+  .search input { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #22324a; background: #0a1424; color: #eef2f7; }
+  .decades { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+  .decades .btn { background: #0a1424; border: 1px solid #22324a; color: #eef2f7; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+  .decades .btn:hover { border-color: #5bb0ff; }
+  .decades .btn.active { background: #5bb0ff; color: #061327; }
+  .panel { background: #101827; border: 1px solid #22324a; border-radius: 14px; overflow: hidden; }
+  .table-wrap{overflow-x:auto}
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid #22324a; white-space: nowrap; font-size: 14px; }
+  tbody tr:nth-child(odd) td { background: #0e172a; }
+  tbody tr:nth-child(even) td { background: #111e34; }
+  tbody tr:hover td { background: #192a48; }
+  .rowcount { color: #b6c1d6; font-size: 12px; padding: 10px 12px; text-align: center; }
+  .newish td { color: #5bb0ff !important; font-weight: 600; }
+
+  /* tiny UI polish for the new button */
+  .btn-plain { background:#0a1424; border:1px solid #22324a; color:#eef2f7; padding:8px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+  .btn-plain:hover { border-color:#5bb0ff; }
+  .btn-plain[disabled] { opacity:.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="controls">
+    <div class="card search">
+      <input id="search" type="search" placeholder="Search title, artist, genre…" />
+    </div>
+    <div class="card">
+      <div class="decades" id="decades">
+        <button class="btn" data-all>All</button>
+        <button class="btn" data-min="1900" data-max="1969">60's</button>
+        <button class="btn" data-min="1970" data-max="1979">70's</button>
+        <button class="btn" data-min="1980" data-max="1989">80's</button>
+        <button class="btn" data-min="1990" data-max="1999">90's</button>
+        <button class="btn" data-min="2000" data-max="2009">00's</button>
+        <button class="btn" data-min="2010" data-max="2019">10's</button>
+        <button class="btn" data-min="2020" data-max="2100">20's</button>
+        <button class="btn" data-clear>Clear</button>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap">
+        <label for="newDays" style="color:#b6c1d6;font-size:12px">Days:</label>
+        <input id="newDays" type="number" min="0" value="" placeholder="" style="width:90px;padding:8px 10px;border-radius:8px;border:1px solid #22324a;background:#0a1424;color:#eef2f7"/>
+        <!-- NEW: filter button -->
+        <button id="filterDaysBtn" class="btn-plain" disabled>Filter Days</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead><tr id="hdr"></tr></thead>
+        <tbody id="body"><tr><td style="text-align:center;color:#b6c1d6;padding:24px">Fetching VideoFiles.csv…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="rowcount" id="rowcount"></div>
+  </div>
+</div>
+
+<script>
+const DESIRED = [
+  {key:'title', aliases:['title','song','track']},
+  {key:'artist', aliases:['artist','performer']},
+  {key:'year', aliases:['year','yr']},
+  {key:'pc', aliases:['play count','plays','count','pc']},
+  {key:'genre', aliases:['genre']},
+  {key:'length', aliases:['length','duration','time']},
+  {key:'grouping', aliases:['grouping','category']}
+];
+const FIRST_SEEN_ALIASES = [
+  'first seen','first_seen','firstseen','first seen date','first_seen_date',
+  'date added','date_added','added','created','import date','imported','ingested','fs'
+];
+
+let displayOrder = [];
+let yearDispCol = -1;
+let sortState = {col:null, asc:true};
+let firstSeenCsvIdx = -1;
+let daysDispCol = -1; // index of the added Days column (displayed)
+
+/* NEW: state for "filter days" button */
+let daysFilterActive = false;
+
+fetch('VideoFiles.csv')
+  .then(r => r.text())
+  .then(text => {
+    text = text.replace(/^\uFEFF/, '').replace(/^sep=.*$/gmi, '').trim();
+    Papa.parse(text, { header:false, skipEmptyLines:true, dynamicTyping:false, complete:onParsed });
+  })
+  .catch(err => { document.getElementById('body').innerHTML = `<tr><td style="color:#f77">Failed to load CSV: ${err}</td></tr>`; });
+
+function onParsed(res){
+  const rows = res.data || [];
+  if(!rows.length){ document.getElementById('body').innerHTML='<tr><td>No data</td></tr>'; return; }
+
+  const headers = rows.shift().map(x=>String(x||'').trim());
+  const lowerAll = headers.map(h=>h.toLowerCase());
+
+  // Locate First Seen column via aliases, else heuristic
+  firstSeenCsvIdx = lowerAll.findIndex(h => FIRST_SEEN_ALIASES.some(a => h===a || h.includes(a)));
+  if(firstSeenCsvIdx < 0){
+    const sampleCount = Math.min(300, rows.length);
+    const counts = new Array(headers.length).fill(0);
+    for(let r=0;r<sampleCount;r++){
+      const row = rows[r] || [];
+      for(let c=0;c<headers.length;c++){
+        const v = row[c];
+        if(v!=null && v!=='' && !isNaN(parseFirstSeen(String(v)))) counts[c]++;
+      }
+    }
+    const max = Math.max(...counts);
+    if(max>5) firstSeenCsvIdx = counts.indexOf(max);
+  }
+
+  // Build display order
+  displayOrder = [];
+  DESIRED.forEach(({aliases})=>{ const i=lowerAll.findIndex(h=>aliases.some(a=>h===a || h.includes(a))); if(i>=0) displayOrder.push(i); });
+  for(let i=0;i<headers.length;i++) if(!displayOrder.includes(i)) displayOrder.push(i);
+
+  const theadRow = document.getElementById('hdr');
+  const tbody = document.getElementById('body');
+  theadRow.innerHTML='';
+  displayOrder.forEach((csvIdx,dispIdx)=>{
+    const th=document.createElement('th');
+    const name=headers[csvIdx];
+    th.textContent=/play count/i.test(name)?'PC':name;
+    th.addEventListener('click',()=>sortByDisplayed(dispIdx));
+    theadRow.appendChild(th);
+  });
+
+  // Add a computed Days column (visible) if we have First Seen
+  if(firstSeenCsvIdx>=0){
+    const th=document.createElement('th');
+    th.textContent='Days';
+    const dispIdx = theadRow.cells.length; // last index
+    th.addEventListener('click',()=>sortByDisplayed(dispIdx));
+    theadRow.appendChild(th);
+    daysDispCol = dispIdx;
+  } else {
+    daysDispCol = -1;
+  }
+
+  // Build body
+  tbody.innerHTML='';
+  const today = new Date(); today.setHours(0,0,0,0);
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(firstSeenCsvIdx >= 0) tr.dataset.firstSeen = r[firstSeenCsvIdx] || '';
+    displayOrder.forEach(i=>{
+      const td=document.createElement('td');
+      td.textContent = (r[i]!==undefined && r[i]!==null) ? String(r[i]) : '';
+      tr.appendChild(td);
+    });
+    if(firstSeenCsvIdx>=0){
+      const raw = r[firstSeenCsvIdx];
+      const ts = parseFirstSeen(raw);
+      let days = '';
+      if(!isNaN(ts)){
+        const d = new Date(ts); d.setHours(0,0,0,0);
+        days = Math.floor((today.getTime()-d.getTime())/86400000);
+      }
+      tr.dataset.days = days!==''? String(days):'';
+      // Tooltip on first cell to verify parsing
+      var fc = tr.cells[0];
+      if(fc){
+        if(!isNaN(ts)){
+          fc.title = 'First Seen: ' + new Date(ts).toLocaleString() + ' • ' + days + ' days ago';
+        } else {
+          fc.title = raw ? ('Unparsed: ' + raw) : '';
+        }
+      }
+      const td=document.createElement('td');
+      td.textContent = days!==''? String(days):'';
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+
+  yearDispCol = Array.from(theadRow.cells).findIndex(th => th.textContent.toLowerCase().includes('year'));
+
+  document.getElementById('search').addEventListener('input', applyFilters);
+  document.getElementById('decades').addEventListener('click', onDecadeClick);
+
+  const nd = document.getElementById('newDays');
+  const fdBtn = document.getElementById('filterDaysBtn');
+
+  if(nd){
+    nd.addEventListener('input', ()=>{
+      // enable/disable button based on validity
+      const val = String(nd.value).trim();
+      const ok = val !== '' && !isNaN(parseInt(val,10)) && parseInt(val,10) >= 0;
+      fdBtn.disabled = !ok;
+      // keep highlight behavior live regardless of filter state
+      applyFilters();
+    });
+  }
+
+  if(fdBtn){
+    fdBtn.addEventListener('click', ()=>{
+      // toggle filter state
+      if(fdBtn.disabled) return;
+      daysFilterActive = !daysFilterActive;
+      fdBtn.textContent = daysFilterActive ? 'Clear Filter' : 'Filter Days';
+      applyFilters();
+    });
+  }
+
+  // initialize button state
+  (function initBtnState(){
+    const val = String(nd?.value ?? '').trim();
+    fdBtn.disabled = !(val !== '' && !isNaN(parseInt(val,10)) && parseInt(val,10) >= 0);
+  })();
+
+  applyFilters();
+}
+
+// Robust First-Seen parser
+function parseFirstSeen(str){
+  if(str==null) return NaN;
+  const s = String(str).trim();
+  if(!s) return NaN;
+  // Excel serial
+  if(/^\d{3,6}$/.test(s)){
+    const n = parseInt(s,10); if(n>20000 && n<90000) return (n - 25569) * 86400000;
+  }
+  // Epoch seconds / ms
+  if(/^\d{10}(?:\.\d+)?$/.test(s)) return parseInt(s,10)*1000;
+  if(/^\d{13}$/.test(s)) return parseInt(s,10);
+  // MM/DD[/YY|YYYY][ HH:MM][ AM|PM]
+  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?(?:\s+(\d{1,2}):(\d{2})(?:\s*(AM|PM|am|pm))?)?$/);
+  if(m){
+    const now = new Date();
+    let month = parseInt(m[1],10)-1;
+    let day = parseInt(m[2],10);
+    let year = m[3] ? parseInt(m[3],10) : now.getFullYear();
+    if(m[3] && m[3].length===2){ year = (parseInt(m[3],10) >= 70 ? 1900 : 2000) + parseInt(m[3],10); }
+    let hour = m[4] ? parseInt(m[4],10) : 0;
+    const minute = m[5] ? parseInt(m[5],10) : 0;
+    const ap = m[6] ? m[6].toUpperCase() : '';
+    if(ap){ if(hour===12) hour = 0; if(ap==='PM') hour += 12; }
+    return new Date(year, month, day, hour, minute, 0).getTime();
+  }
+  // YYYY.MM.DD or YYYY/MM/DD
+  m = s.match(/^(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})$/);
+  if(m){
+    return new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10)).getTime();
+  }
+    // Final fallback: native parser (ISO etc.)
+  var native = new Date(s);
+  if(!isNaN(native)) return native.getTime();
+  return NaN;
+}
+
+function onDecadeClick(e){
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  if(btn.hasAttribute('data-all')){
+    document.querySelectorAll('.decades .btn').forEach(b=>b.classList.remove('active'));
+  } else if(btn.hasAttribute('data-clear')){
+    document.querySelectorAll('.decades .btn').forEach(b=>b.classList.remove('active'));
+  } else if(btn.hasAttribute('data-min')){
+    btn.classList.toggle('active');
+  }
+  applyFilters();
+}
+
+function getActiveRanges(){
+  return Array.from(document.querySelectorAll('.decades .btn.active[data-min]')).map(b=>({
+    min: parseInt(b.dataset.min)||1900,
+    max: parseInt(b.dataset.max)||2100
+  }));
+}
+
+function extractYear(text){
+  const m = String(text||'').match(/\b(18|19|20)\d{2}\b/);
+  return m ? parseInt(m[0],10) : NaN;
+}
+
+function applyFilters(){
+  const q = (document.getElementById('search').value||'').toLowerCase().trim();
+  const ranges = getActiveRanges();
+  const rows = Array.from(document.getElementById('body').rows);
+  const nd = document.getElementById('newDays');
+  const fdBtn = document.getElementById('filterDaysBtn');
+  const daysRaw = nd ? String(nd.value).trim() : '';
+  const hasDaysInput = daysRaw !== '';
+  const days = hasDaysInput ? parseInt(daysRaw,10) : NaN;
+
+  let shown = 0;
+  rows.forEach(r=>{
+    const cells = Array.from(r.cells);
+    const text = cells.map(td=>td.textContent.toLowerCase()).join(' ');
+    const passSearch = !q || text.includes(q);
+
+    let passYear = true;
+    if(ranges.length && yearDispCol>=0){
+      const yr = extractYear(cells[yearDispCol].textContent);
+      passYear = !isNaN(yr) && ranges.some(({min,max})=> yr>=min && yr<=max);
+    }
+
+    // Highlight using precomputed Days value
+    if(hasDaysInput && !isNaN(days) && days >= 0){
+      const age = r.dataset.days!=='' ? parseInt(r.dataset.days,10) : NaN;
+      if(!isNaN(age) && age >= 0 && age <= days) r.classList.add('newish'); else r.classList.remove('newish');
+    } else {
+      r.classList.remove('newish');
+    }
+
+    // NEW: actual filtering when the button is active
+    let passDaysFilter = true;
+    if(daysFilterActive){
+      if(!(hasDaysInput && !isNaN(days) && days >= 0)){
+        passDaysFilter = false; // if button is active but input invalid, hide all (and UI should prevent this)
+      } else {
+        const age = r.dataset.days!=='' ? parseInt(r.dataset.days,10) : NaN;
+        passDaysFilter = (!isNaN(age) && age >= 0 && age <= days);
+      }
+    }
+
+    const show = passSearch && passYear && passDaysFilter;
+    r.style.display = show ? '' : 'none';
+    if(show) shown++;
+  });
+  document.getElementById('rowcount').textContent = `${shown} of ${rows.length} shown`;
+
+  // small UX nicety: disable button if Days is empty/invalid while not active
+  if(!daysFilterActive && fdBtn){
+    const ok = hasDaysInput && !isNaN(days) && days >= 0;
+    fdBtn.disabled = !ok;
+  }
+}
+
+function sortByDisplayed(dispIdx){
+  const asc = sortState.col===dispIdx ? !sortState.asc : true;
+  sortState = {col: dispIdx, asc};
+  const tbody = document.getElementById('body');
+  const rows = Array.from(tbody.rows);
+  const headerText = document.getElementById('hdr').cells[dispIdx].textContent;
+  const isLength = /length|duration|time/i.test(headerText);
+  const isDays = /^(days)$/i.test(headerText);
+
+  rows.sort((a,b)=>{
+    const av=a.cells[dispIdx]?.textContent.trim()||'';
+    const bv=b.cells[dispIdx]?.textContent.trim()||'';
+    if(isDays){
+      const na=parseInt(av,10), nb=parseInt(bv,10);
+      if(isNaN(na) && isNaN(nb)) return 0; if(isNaN(na)) return 1; if(isNaN(nb)) return -1;
+      return asc ? (na-nb) : (nb-na);
+    }
+    if(isLength){
+      const toSec=s=>{const m=s.match(/^(\d{1,2}):(\d{2})$/);return m? (parseInt(m[1],10)*60+parseInt(m[2],10)):NaN};
+      const sa=toSec(av), sb=toSec(bv);
+      return asc ? (sa-sb) : (sb-sa);
+    }
+    const na=parseFloat(av), nb=parseFloat(bv);
+    if(!isNaN(na) && !isNaN(nb)) return asc ? (na-nb) : (nb-na);
+    return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+  applyFilters();
+}
+</script>
+</body>
+</html>

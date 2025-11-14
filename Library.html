@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Bob's Music Video Library</title>
+        <link href="css/theme.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="css/library.css"/>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Video Library</h1>
+            <div class="filters">
+                <input type="text" id="search" placeholder="Search title, artist, genre"/>
+                <input type="number" id="daysFilter" placeholder="Days" min="0"/>
+                <button onclick="applyDaysFilter()">Filter</button>
+            </div>
+            <div class="decade-buttons">
+                <button onclick="filterByDecade('')">All</button>
+                <button onclick="filterByDecade('1950')">60's</button>
+                <button onclick="filterByDecade('1970')">70's</button>
+                <button onclick="filterByDecade('1980')">80's</button>
+                <button onclick="filterByDecade('1990')">90's</button>
+                <button onclick="filterByDecade('2000')">00's</button>
+                <button onclick="filterByDecade('2010')">10's</button>
+                <button onclick="filterByDecade('2020')">20's</button>
+                <button onclick="filterByDecade('clear')">Clear</button>
+            </div>
+            <table id="videoTable">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Artist</th>
+                        <th>Genre</th>
+                        <th>Play Count</th>
+                        <th>Year</th>
+                        <th>Length</th>
+                        <th>Days</th>
+                        <th class="hide-column">First Seen</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <script>
+    let allVideos = [];
+
+    fetch("videos/VideoFiles.csv")
+      .then((response) => response.text())
+      .then((data) => {
+        const rows = data.trim().split("\n");
+        const headers = rows[0].split(",");
+        allVideos = rows.slice(1).map((row) => {
+          const values = row.split(",");
+          const obj = {};
+          headers.forEach((h, i) => (obj[h.trim()] = values[i]?.trim()));
+          return obj;
+        });
+        renderTable(allVideos);
+      });
+
+    function renderTable(videos) {
+      const tbody = document.querySelector("#videoTable tbody");
+      tbody.innerHTML = "";
+      const today = new Date();
+
+      videos.forEach((video) => {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = video["Title"] || "";
+        row.insertCell().textContent = video["Artist"] || "";
+        row.insertCell().textContent = video["Genre"] || "";
+        row.insertCell().textContent = video["Play Count"] || "";
+        row.insertCell().textContent = video["Year"] || "";
+        row.insertCell().textContent = video["Length"] || "";
+
+        // Calculate Days
+        const daysCell = row.insertCell();
+        let days = "";
+        const firstSeenStr = video["First Seen"];
+        if (firstSeenStr) {
+          const firstSeenDate = new Date(firstSeenStr);
+          if (!isNaN(firstSeenDate)) {
+            const diffTime = today - firstSeenDate;
+            days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          }
+        }
+        daysCell.textContent = days;
+
+        // Hidden First Seen column
+        const hidden = row.insertCell();
+        hidden.textContent = firstSeenStr || "";
+        hidden.style.display = "none";
+      });
+    }
+
+    function applyDaysFilter() {
+      const threshold = parseInt(document.getElementById("daysFilter").value);
+      if (isNaN(threshold)) {
+        renderTable(allVideos);
+        return;
+      }
+      const today = new Date();
+      const filtered = allVideos.filter((video) => {
+        const firstSeen = new Date(video["First Seen"]);
+        if (isNaN(firstSeen)) return false;
+        const daysAgo = Math.floor((today - firstSeen) / (1000 * 60 * 60 * 24));
+        return daysAgo >= threshold;
+      });
+      renderTable(filtered);
+    }
+
+    function filterByDecade(decade) {
+      if (decade === "clear" || decade === "") {
+        renderTable(allVideos);
+        return;
+      }
+      const filtered = allVideos.filter((video) => video["Year"]?.startsWith(decade));
+      renderTable(filtered);
+    }
+
+    document.getElementById("search").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allVideos.filter((v) =>
+        (v["Title"] + v["Artist"] + v["Genre"]).toLowerCase().includes(q)
+      );
+      renderTable(filtered);
+    });
+  </script>
+        <style>
+    .hide-column {
+      display: none;
+    }
+  </style>
+    </body>
+</html>

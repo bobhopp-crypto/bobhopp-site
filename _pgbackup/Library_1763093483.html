@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Video Library</title>
+        <style>
+    body {
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      font-size: 1em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    tr:hover {
+      background-color: #333;
+      transform: scale(1.01);
+    }
+    th {
+      background-color: #222;
+    }
+    .icon-button {
+      display: inline-block;
+      padding: 10px;
+      margin: 5px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .icon-button:hover {
+      transform: scale(1.05);
+    }
+    .icon-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      th, td {
+        padding: 10px;
+        text-align: right;
+      }
+    }
+  </style>
+    </head>
+    <body>
+        <h1>Video Library</h1>
+        <input type="text" id="searchBox" placeholder="Search title, artist, genre">
+        <input type="number" id="dayBox" placeholder="Days">
+        <button onclick="applyFilters()">Filter</button>
+        <div class="icon-row">
+            <button class="icon-button" onclick="filterByDecade('1960')">60's</button>
+            <button class="icon-button" onclick="filterByDecade('1970')">70's</button>
+            <button class="icon-button" onclick="filterByDecade('1980')">80's</button>
+            <button class="icon-button" onclick="filterByDecade('1990')">90's</button>
+            <button class="icon-button" onclick="filterByDecade('2000')">00's</button>
+            <button class="icon-button" onclick="filterByDecade('2010')">10's</button>
+            <button class="icon-button" onclick="filterByDecade('2020')">20's</button>
+            <button class="icon-button" onclick="resetFilters()">Clear</button>
+        </div>
+        <table id="videoTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Genre</th>
+                    <th>Play Count</th>
+                    <th>Year</th>
+                    <th>Length</th>
+                    <th>First Seen</th>
+                </tr>
+            </thead>
+            <tbody id="videoBody"></tbody>
+        </table>
+        <script>
+    let allRows = [];
+
+    fetch("videos/VideoFiles.csv")
+      .then(response => response.text())
+      .then(data => {
+        const lines = data.split("\n").slice(1);
+        allRows = lines.map(line => line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^"|"$/g, '')));
+        populateTable(allRows);
+      })
+      .catch(error => {
+        console.error("Error loading CSV:", error);
+        document.getElementById("videoBody").innerHTML = `<tr><td colspan="7">Error loading data</td></tr>`;
+      });
+
+    function populateTable(rows) {
+      const tbody = document.getElementById("videoBody");
+      tbody.innerHTML = "";
+      rows.forEach(cells => {
+        if (cells.length >= 7) {
+          const row = `<tr><td>${cells[0]}</td><td>${cells[1]}</td><td>${cells[2]}</td><td>${cells[3]}</td><td>${cells[4]}</td><td>${cells[5]}</td><td>${cells[6]}</td></tr>`;
+          tbody.innerHTML += row;
+        }
+      });
+    }
+
+    function filterByDecade(decade) {
+      const filtered = allRows.filter(row => row[4] && row[4].startsWith(decade));
+      populateTable(filtered);
+    }
+
+    function applyFilters() {
+      const search = document.getElementById("searchBox").value.toLowerCase();
+      const days = parseInt(document.getElementById("dayBox").value, 10);
+      const now = new Date();
+
+      const filtered = allRows.filter(row => {
+        const matchText = row[0] + row[1] + row[2];
+        const matchesSearch = search === "" || matchText.toLowerCase().includes(search);
+
+        let matchesDays = true;
+        if (!isNaN(days) && row[6]) {
+          const firstSeen = parseFirstSeen(row[6]);
+          if (firstSeen) {
+            const diff = (now - firstSeen) / (1000 * 60 * 60 * 24);
+            matchesDays = diff <= days;
+          }
+        }
+
+        return matchesSearch && matchesDays;
+      });
+
+      populateTable(filtered);
+    }
+
+    function parseFirstSeen(value) {
+      const [datePart, timePart] = value.split(" ");
+      const [month, day] = datePart.split("/").map(Number);
+      const [hourMinute, ampm] = [timePart.slice(0, -2), timePart.slice(-2)];
+      let [hours, minutes] = hourMinute.split(":".map(Number));
+      if (ampm === "PM" && hours !== 12) hours += 12;
+      if (ampm === "AM" && hours === 12) hours = 0;
+      const now = new Date();
+      const parsedDate = new Date(now.getFullYear(), month - 1, day, hours, minutes);
+      return isNaN(parsedDate) ? null : parsedDate;
+    }
+
+    function resetFilters() {
+      document.getElementById("searchBox").value = "";
+      document.getElementById("dayBox").value = "";
+      populateTable(allRows);
+    }
+  </script>
+    </body>
+</html>
