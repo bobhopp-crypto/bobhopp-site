@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>Bob's Music Video Library</title>
-        <style>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bob's Music Video Library</title>
+  <style>
     body {
       font-family: system-ui, sans-serif;
       background-color: #0c0f1c;
@@ -69,40 +69,44 @@
       vertical-align: middle;
     }
   </style>
-    </head>
-    <body>
-        <div class="filters">
-            <input type="text" id="search" placeholder="Search videos..."/>
-            <input type="number" id="daysFilter" placeholder="Days" min="0"/>
-            <button onclick="applyFilters()">Filter</button>
-        </div>
-        <div class="filters decade-filter">
-            <button onclick="setDecade('')">All</button>
-            <button onclick="setDecade('195')">1950s</button>
-            <button onclick="setDecade('196')">1960s</button>
-            <button onclick="setDecade('197')">1970s</button>
-            <button onclick="setDecade('198')">1980s</button>
-            <button onclick="setDecade('199')">1990s</button>
-            <button onclick="setDecade('200')">2000s</button>
-            <button onclick="setDecade('201')">2010s</button>
-            <button onclick="setDecade('202')">2020s</button>
-        </div>
-        <table id="videoTable">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>Title</th>
-                    <th>Artist</th>
-                    <th>Year</th>
-                    <th>Genre</th>
-                    <th>Length</th>
-                    <th>Play Count</th>
-                    <th>Days</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <script>
+</head>
+<body>
+  <h1>Bob's Music Video Library</h1>
+  <div class="filters">
+    <input type="text" id="search" placeholder="Search videos..." />
+    <input type="number" id="daysFilter" placeholder="Days" min="0" />
+    <button onclick="applyFilters()">Filter</button>
+  </div>
+
+  <div class="filters decade-filter">
+    <button onclick="setDecade('')">All</button>
+    <button onclick="setDecade('195')">1950s</button>
+    <button onclick="setDecade('196')">1960s</button>
+    <button onclick="setDecade('197')">1970s</button>
+    <button onclick="setDecade('198')">1980s</button>
+    <button onclick="setDecade('199')">1990s</button>
+    <button onclick="setDecade('200')">2000s</button>
+    <button onclick="setDecade('201')">2010s</button>
+    <button onclick="setDecade('202')">2020s</button>
+  </div>
+
+  <table id="videoTable">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Title</th>
+        <th>Artist</th>
+        <th>Year</th>
+        <th>Genre</th>
+        <th>Length</th>
+        <th>Play Count</th>
+        <th>Days</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
     let allVideos = [];
     let currentDecade = '';
 
@@ -177,5 +181,5 @@
       applyFilters();
     }
   </script>
-    </body>
+</body>
 </html>
