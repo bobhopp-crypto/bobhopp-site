@@ -1,0 +1,112 @@
+
+/* Dark mode theme */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #0d1117;
+    color: #c9d1d9;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    color: #f0f6fc;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.filters input[type="text"],
+.filters input[type="number"] {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #30363d;
+    background-color: #161b22;
+    color: #c9d1d9;
+}
+
+.filters button {
+    background-color: #238636;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.filters button:hover {
+    background-color: #2ea043;
+}
+
+.decade-buttons button {
+    background-color: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    margin: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.decade-buttons button.active {
+    background-color: #238636;
+    color: white;
+}
+
+.decade-buttons button:hover {
+    background-color: #2ea043;
+}
+
+#columnToggle {
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: #c9d1d9;
+}
+
+#columnToggle label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #161b22;
+}
+
+thead {
+    background-color: #21262d;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #30363d;
+}
+
+th {
+    color: #f0f6fc;
+}
+
+td {
+    color: #c9d1d9;
+}
+
+tr:hover {
+    background-color: #1f2a36;
+}

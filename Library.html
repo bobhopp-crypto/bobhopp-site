@@ -4,38 +4,57 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Bob's Music Video Library</title>
-        <link href="css/theme.css" rel="stylesheet" type="text/css">
         <link rel="stylesheet" href="css/library.css"/>
     </head>
     <body>
         <div class="container">
-            <div class="filters">
-                <input type="text" id="search" placeholder="Search title, artist, genre"/>
+            <div class="controls">
+                <input type="text" id="search" placeholder="Search videos..."/>
                 <input type="number" id="daysFilter" placeholder="Days" min="0"/>
                 <button onclick="applyDaysFilter()">Filter</button>
             </div>
-            <div class="decade-buttons">
+            <div class="decades">
                 <button onclick="filterByDecade('')">All</button>
-                <button onclick="filterByDecade('1950')">60's</button>
-                <button onclick="filterByDecade('1970')">70's</button>
-                <button onclick="filterByDecade('1980')">80's</button>
-                <button onclick="filterByDecade('1990')">90's</button>
-                <button onclick="filterByDecade('2000')">00's</button>
-                <button onclick="filterByDecade('2010')">10's</button>
-                <button onclick="filterByDecade('2020')">20's</button>
-                <button onclick="filterByDecade('clear')">Clear</button>
+                <button onclick="filterByDecade('1950')">1950s</button>
+                <button onclick="filterByDecade('1960')">1960s</button>
+                <button onclick="filterByDecade('1970')">1970s</button>
+                <button onclick="filterByDecade('1980')">1980s</button>
+                <button onclick="filterByDecade('1990')">1990s</button>
+                <button onclick="filterByDecade('2000')">2000s</button>
+                <button onclick="filterByDecade('2010')">2010s</button>
+                <button onclick="filterByDecade('2020')">2020s</button>
+            </div>
+            <div class="column-toggles">
+                <label>
+                    <input type="checkbox" checked data-col="Title"> Title
+                </label>
+                <label>
+                    <input type="checkbox" checked data-col="Artist"> Artist
+                </label>
+                <label>
+                    <input type="checkbox" checked data-col="Year"> Year
+                </label>
+                <label>
+                    <input type="checkbox" checked data-col="Genre"> Genre
+                </label>
+                <label>
+                    <input type="checkbox" checked data-col="Length"> Length
+                </label>
+                <label>
+                    <input type="checkbox" checked data-col="Play Count"> Play Count
+                </label>
             </div>
             <table id="videoTable">
                 <thead>
                     <tr>
                         <th>Title</th>
                         <th>Artist</th>
-                        <th>Genre</th>
-                        <th>Play Count</th>
                         <th>Year</th>
+                        <th>Genre</th>
                         <th>Length</th>
+                        <th>Play Count</th>
                         <th>Days</th>
-                        <th class="hide-column">First Seen</th>
+                        <th style="display: none;">First Seen</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -45,14 +64,14 @@
     let allVideos = [];
 
     fetch("videos/VideoFiles.csv")
-      .then((response) => response.text())
-      .then((data) => {
+      .then(response => response.text())
+      .then(data => {
         const rows = data.trim().split("\n");
         const headers = rows[0].split(",");
-        allVideos = rows.slice(1).map((row) => {
+        allVideos = rows.slice(1).map(row => {
           const values = row.split(",");
           const obj = {};
-          headers.forEach((h, i) => (obj[h.trim()] = values[i]?.trim()));
+          headers.forEach((h, i) => obj[h.trim()] = values[i]?.trim());
           return obj;
         });
         renderTable(allVideos);
@@ -63,31 +82,30 @@
       tbody.innerHTML = "";
       const today = new Date();
 
-      videos.forEach((video) => {
+      videos.forEach(video => {
         const row = tbody.insertRow();
+
         row.insertCell().textContent = video["Title"] || "";
         row.insertCell().textContent = video["Artist"] || "";
-        row.insertCell().textContent = video["Genre"] || "";
-        row.insertCell().textContent = video["Play Count"] || "";
         row.insertCell().textContent = video["Year"] || "";
+        row.insertCell().textContent = video["Genre"] || "";
         row.insertCell().textContent = video["Length"] || "";
+        row.insertCell().textContent = video["Play Count"] || "";
 
-        // Calculate Days
         const daysCell = row.insertCell();
-        let days = "";
         const firstSeenStr = video["First Seen"];
+        let days = "";
         if (firstSeenStr) {
           const firstSeenDate = new Date(firstSeenStr);
           if (!isNaN(firstSeenDate)) {
-            const diffTime = today - firstSeenDate;
-            days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diff = today - firstSeenDate;
+            days = Math.floor(diff / (1000 * 60 * 60 * 24));
           }
         }
         daysCell.textContent = days;
 
-        // Hidden First Seen column
         const hidden = row.insertCell();
-        hidden.textContent = firstSeenStr || "";
+        hidden.textContent = video["First Seen"];
         hidden.style.display = "none";
       });
     }
@@ -99,32 +117,53 @@
         return;
       }
       const today = new Date();
-      const filtered = allVideos.filter((video) => {
-        const firstSeen = new Date(video["First Seen"]);
-        if (isNaN(firstSeen)) return false;
-        const daysAgo = Math.floor((today - firstSeen) / (1000 * 60 * 60 * 24));
+      const filtered = allVideos.filter(video => {
+        const date = new Date(video["First Seen"]);
+        if (isNaN(date)) return false;
+        const daysAgo = Math.floor((today - date) / (1000 * 60 * 60 * 24));
         return daysAgo >= threshold;
       });
       renderTable(filtered);
     }
 
     function filterByDecade(decade) {
-      if (decade === "clear" || decade === "") {
+      if (!decade) {
         renderTable(allVideos);
         return;
       }
-      const filtered = allVideos.filter((video) => video["Year"]?.startsWith(decade));
+      const filtered = allVideos.filter(video => video["Year"]?.startsWith(decade));
       renderTable(filtered);
     }
 
     document.getElementById("search").addEventListener("input", (e) => {
       const q = e.target.value.toLowerCase();
-      const filtered = allVideos.filter((v) =>
-        (v["Title"] + v["Artist"] + v["Genre"]).toLowerCase().includes(q)
+      const filtered = allVideos.filter(video =>
+        (video["Title"] + video["Artist"] + video["Genre"]).toLowerCase().includes(q)
       );
       renderTable(filtered);
     });
+
+    document.querySelectorAll(".column-toggles input").forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        const colName = checkbox.dataset.col;
+        const ths = document.querySelectorAll(`#videoTable th`);
+        const tds = document.querySelectorAll(`#videoTable td`);
+        const headers = ["Title", "Artist", "Year", "Genre", "Length", "Play Count", "Days"];
+
+        const colIndex = headers.indexOf(colName);
+        if (colIndex === -1) return;
+
+        // Show/hide header
+        ths[colIndex].style.display = checkbox.checked ? "" : "none";
+
+        // Show/hide corresponding cells
+        Array.from(document.querySelectorAll(`#videoTable tbody tr`)).forEach(row => {
+          if (row.cells[colIndex]) {
+            row.cells[colIndex].style.display = checkbox.checked ? "" : "none";
+          }
+        });
+      });
+    });
   </script>
-        <style>.hide-column { display: none; }</style>
     </body>
 </html>

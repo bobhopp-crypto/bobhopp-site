@@ -1,112 +1,135 @@
-
-/* Dark mode theme */
+/* === BASE STYLES === */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #0d1117;
-    color: #c9d1d9;
     margin: 0;
-    padding: 20px;
-}
-
-h1 {
-    text-align: center;
-    color: #f0f6fc;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0b0f1a;
+    color: #e0e0e0;
 }
 
 .container {
-    max-width: 1200px;
+    padding: 2rem;
+    max-width: 1400px;
     margin: auto;
 }
 
-.filters {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 20px;
-    gap: 10px;
+/* === HEADERS AND TITLES === */
+h1 {
+    color: #f5c542;
+    font-size: 24px;
+    margin-bottom: 1rem;
 }
 
-.filters input[type="text"],
-.filters input[type="number"] {
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #30363d;
-    background-color: #161b22;
-    color: #c9d1d9;
+/* === INPUT FIELDS === */
+input[type="text"],
+input[type="number"] {
+    background-color: #1d2233;
+    color: #ffffff;
+    border: 1px solid #2e3a59;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-right: 0.5rem;
+    font-size: 14px;
+    outline: none;
 }
 
-.filters button {
-    background-color: #238636;
+input[type="text"]::placeholder,
+input[type="number"]::placeholder {
+    color: #888;
+}
+
+/* === BUTTONS === */
+button {
+    background-color: #1f4f8b;
     color: white;
     border: none;
-    padding: 8px 14px;
-    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 14px;
     cursor: pointer;
 }
 
-.filters button:hover {
-    background-color: #2ea043;
+button:hover {
+    background-color: #2766af;
 }
 
-.decade-buttons button {
-    background-color: #21262d;
-    color: #c9d1d9;
-    border: 1px solid #30363d;
-    margin: 5px;
-    padding: 6px 10px;
+/* === DECADE FILTERS === */
+.decades {
+    margin: 1rem 0;
+}
+
+.decades button {
+    background-color: #1a1f2d;
+    color: #e0e0e0;
+    border: none;
+    margin: 4px 6px 4px 0;
+    padding: 6px 12px;
     border-radius: 6px;
-    cursor: pointer;
+    font-size: 13px;
 }
 
-.decade-buttons button.active {
-    background-color: #238636;
-    color: white;
+.decades button.active {
+    background-color: #284a77;
+    color: #fff;
 }
 
-.decade-buttons button:hover {
-    background-color: #2ea043;
+.decades button:hover {
+    background-color: #2d4d7a;
 }
 
-#columnToggle {
-    margin: 20px auto;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    color: #c9d1d9;
+/* === COLUMN TOGGLES === */
+.column-toggles {
+    margin-bottom: 1rem;
 }
 
-#columnToggle label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.column-toggles label {
+    margin-right: 1rem;
+    font-size: 13px;
+    user-select: none;
 }
 
-table {
+.column-toggles input[type="checkbox"] {
+    transform: scale(1.2);
+    accent-color: #007bff;
+}
+
+/* === VIDEO TABLE === */
+#videoTable {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-    background-color: #161b22;
+    font-size: 14px;
+    background-color: #111827;
 }
 
-thead {
-    background-color: #21262d;
+#videoTable thead {
+    background-color: #1d253b;
+    color: #f5c542;
 }
 
-th, td {
-    padding: 12px;
+#videoTable th,
+#videoTable td {
+    padding: 12px 10px;
     text-align: left;
-    border-bottom: 1px solid #30363d;
+    border-bottom: 1px solid #2c354e;
 }
 
-th {
-    color: #f0f6fc;
+#videoTable tr:nth-child(even) {
+    background-color: #141b2e;
 }
 
-td {
-    color: #c9d1d9;
+#videoTable tr:nth-child(odd) {
+    background-color: #0f1424;
 }
 
-tr:hover {
-    background-color: #1f2a36;
+#videoTable tr:hover {
+    background-color: #1f2a45;
+}
+
+/* === SCROLLBAR (OPTIONAL) === */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #444a5c;
+    border-radius: 4px;
 }
